@@ -70,14 +70,19 @@ def inspect_recording(recording_path: pathlib.Path):
         decoded_bytes = manchester_code.decode(
             numpy.packbits(repeats_bits[0][18:], bitorder="big")
         )
+        assert len(decoded_bytes) == 7
         temperature, = struct.unpack(">H", decoded_bytes[3:5])
-        temperature_celsius = temperature / 576.298274 - 40  # TODO
+        # intercept: -40°C = -40°F
+        # slope estimated with statsmodels.regression.linear_model.OLS
+        temperature_celsius = temperature / 576.298274 - 40
         print(
-            decoded_bytes[:2],
-            decoded_bytes[2],
+            f"{decoded_bytes[0]:02x}",
+            f"{decoded_bytes[1]:02x}",
+            f"{decoded_bytes[2]:02x}",
             f"{temperature_celsius:.01f}°C",
-            list(decoded_bytes[5:]),
-            sep="\t",
+            f"{decoded_bytes[5]:02x}",
+            f"{decoded_bytes[6]:02x}",
+            # sep="\t",
         )
     # pyplot.hist(bit_lengths, bins=80, range=(0, 80))
     # pyplot.show()
