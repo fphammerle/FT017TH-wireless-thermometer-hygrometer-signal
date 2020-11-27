@@ -19,9 +19,9 @@ def inspect_recording(recording_path: pathlib.Path):
     print("frames before trimming:", data.shape[0])
     frames = data[:, 0]
     # pyplot.plot(frames, linewidth=0.5)
-    smoothed_frames = scipy.signal.medfilt(frames, kernel_size=31)
+    smoothed_frames = scipy.signal.medfilt(frames, kernel_size=21)
     # pyplot.plot(smoothed_frames)
-    silence_mask = scipy.signal.medfilt(smoothed_frames == 0, kernel_size=31)
+    silence_mask = scipy.signal.medfilt(smoothed_frames == 0, kernel_size=21)
     msg_start_indices = [
         next(silence_mask_iter)[0]
         for is_silence, silence_mask_iter in itertools.groupby(
@@ -37,21 +37,23 @@ def inspect_recording(recording_path: pathlib.Path):
     )
     print("number of messages:", len(msgs_frames))
     bit_lengths = []
-    for msg_frames in msgs_frames:
+    for msg_frames, ax in zip(msgs_frames, pyplot.subplots(len(msgs_frames))[1]):
+        # pyplot.figure()
         # pyplot.plot(msg_frames)
-        digital_msg_frames = numpy.trim_zeros(
-            msg_frames > (numpy.max(msg_frames) / 4), trim="f"
-        )
-        # pyplot.plot(digital_msg_frames[:-5000])
+        threshold = numpy.max(msg_frames) / 4
+        digital_msg_frames = msg_frames > threshold
+        # pyplot.plot(digital_msg_frames * threshold)
         bits = []
-        for bit, bit_frames_iter in itertools.groupby(digital_msg_frames):
+        for bit, bit_frames_iter in itertools.groupby(
+            numpy.trim_zeros(digital_msg_frames, trim="f")
+        ):
             bit_length = sum(1 for _ in bit_frames_iter)
             bit_lengths.append(bit_length)
             bits.append(bit)
             if bit_length > 36:
                 bits.append(bit)
         print("message length:", len(bits), "bits")
-        pyplot.plot(bits)
+        ax.plot(bits)
     # pyplot.hist(bit_lengths, bins=80, range=(0, 80))
     pyplot.show()
 
@@ -63,7 +65,7 @@ def _main():
         type=pathlib.Path,
         nargs="?",
         default=pathlib.Path(__file__).parent.joinpath(
-            "gqrx_20201127_090051_433893500.silences-shortened-4s.wav"
+            "gqrx_20201127_110315_433893500.silences-shortened-4s.wav"
         ),
     )
     args = argparser.parse_args()
