@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import argparse
 import itertools
+import pathlib
 
 import numpy
 import numpy.ma
@@ -9,10 +11,8 @@ import scipy.io.wavfile
 import scipy.signal
 
 
-def main():
-    samplerate_per_sec, data = scipy.io.wavfile.read(
-        "./gqrx_20201127_090051_433893500.silences-shortened-4s.wav"
-    )
+def inspect_recording(recording_path: pathlib.Path):
+    samplerate_per_sec, data = scipy.io.wavfile.read(recording_path)
     print("sample rate:", samplerate_per_sec, "Hz")
     assert data.shape[1:] == (2,)
     assert (data[:, 0] == data[:, 1]).all()
@@ -56,5 +56,19 @@ def main():
     pyplot.show()
 
 
+def _main():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument(
+        "recording_path",
+        type=pathlib.Path,
+        nargs="?",
+        default=pathlib.Path(__file__).parent.joinpath(
+            "gqrx_20201127_090051_433893500.silences-shortened-4s.wav"
+        ),
+    )
+    args = argparser.parse_args()
+    inspect_recording(args.recording_path)
+
+
 if __name__ == "__main__":
-    main()
+    _main()
