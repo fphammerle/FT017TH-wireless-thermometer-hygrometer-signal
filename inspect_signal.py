@@ -8,6 +8,7 @@ import struct
 import manchester_code
 import numpy
 import scipy.io.wavfile
+import scipy.ndimage
 import scipy.signal
 from matplotlib import pyplot
 
@@ -42,7 +43,11 @@ def inspect_recording(recording_path: pathlib.Path):
     for msg_frames in msgs_frames:
         # pyplot.figure()
         # pyplot.plot(msg_frames)
-        threshold = numpy.max(msg_frames) / 4
+        rolling_mean = scipy.ndimage.uniform_filter1d(msg_frames, size=21 * 16)
+        minimum_threshold = numpy.max(msg_frames) / 5
+        threshold = numpy.where(
+            rolling_mean > minimum_threshold, rolling_mean, minimum_threshold
+        )
         digital_msg_frames = msg_frames > threshold
         # pyplot.plot(digital_msg_frames * threshold)
         bits = []
