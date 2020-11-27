@@ -61,19 +61,22 @@ def inspect_recording(recording_path: pathlib.Path):
                 bits.append(bit)
         # print("message length:", len(bits), "bits")
         # subplot.plot(bits)
-        assert bits[:16] == [True, False] * 8, "sync?"
         assert len(bits) == 390
+        repeats_bits = numpy.split(numpy.array(bits), 3)
+        assert numpy.array_equal(repeats_bits[0], repeats_bits[1])
+        repeats_bits[2][-2] = repeats_bits[1][-2]  # FIXME
+        assert numpy.array_equal(repeats_bits[0], repeats_bits[2])
+        assert (repeats_bits[0][:18] == [True, False] * 9).all(), "sync?"
         decoded_bytes = manchester_code.decode(
-            numpy.packbits(bits, bitorder="big")[:384]
+            numpy.packbits(repeats_bits[0][18:], bitorder="big")
         )
-        # print("decoded:", list(decoded_bytes))
-        assert decoded_bytes[:2] == b"\xff\xd4", f"common prefix?"
-        assert decoded_bytes[8:10] == b"\xff\xea", "separator?"
-        assert decoded_bytes[16:18] == b"\x7f\xf5", "separator?"
+        temperature, = struct.unpack(">H", decoded_bytes[3:5])
+        temperature_celsius = temperature / 576.298274 - 40  # TODO
         print(
-            list(decoded_bytes[2:8]),  # humidity?
-            list(decoded_bytes[10:16]),  # temperature?
-            list(decoded_bytes[18:]),  # humidity?
+            decoded_bytes[:2],
+            decoded_bytes[2],
+            f"{temperature_celsius:.01f}°C",
+            list(decoded_bytes[5:]),
             sep="\t",
         )
     # pyplot.hist(bit_lengths, bins=80, range=(0, 80))
