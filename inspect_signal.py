@@ -4,11 +4,11 @@ import argparse
 import itertools
 import pathlib
 
+import manchester_code
 import numpy
-import numpy.ma
-from matplotlib import pyplot
 import scipy.io.wavfile
 import scipy.signal
+from matplotlib import pyplot
 
 
 def inspect_recording(recording_path: pathlib.Path):
@@ -37,7 +37,8 @@ def inspect_recording(recording_path: pathlib.Path):
     )
     print("number of messages:", len(msgs_frames))
     bit_lengths = []
-    for msg_frames, ax in zip(msgs_frames, pyplot.subplots(len(msgs_frames))[1]):
+    # for msg_frames, subplot in zip(msgs_frames, pyplot.subplots(len(msgs_frames))[1]):
+    for msg_frames in msgs_frames:
         # pyplot.figure()
         # pyplot.plot(msg_frames)
         threshold = numpy.max(msg_frames) / 4
@@ -53,9 +54,15 @@ def inspect_recording(recording_path: pathlib.Path):
             if bit_length > 36:
                 bits.append(bit)
         print("message length:", len(bits), "bits")
-        ax.plot(bits)
+        # subplot.plot(bits)
+        assert bits[:16] == [True, False] * 8, "sync?"
+        assert len(bits) == 390
+        decoded_bytes = manchester_code.decode(
+            numpy.packbits(bits, bitorder="big")[:384]
+        )
+        print("decoded:", list(decoded_bytes))
     # pyplot.hist(bit_lengths, bins=80, range=(0, 80))
-    pyplot.show()
+    # pyplot.show()
 
 
 def _main():
