@@ -3,6 +3,7 @@
 import argparse
 import itertools
 import pathlib
+import struct
 
 import manchester_code
 import numpy
@@ -53,14 +54,23 @@ def inspect_recording(recording_path: pathlib.Path):
             bits.append(bit)
             if bit_length > 36:
                 bits.append(bit)
-        print("message length:", len(bits), "bits")
+        # print("message length:", len(bits), "bits")
         # subplot.plot(bits)
         assert bits[:16] == [True, False] * 8, "sync?"
         assert len(bits) == 390
         decoded_bytes = manchester_code.decode(
             numpy.packbits(bits, bitorder="big")[:384]
         )
-        print("decoded:", list(decoded_bytes))
+        # print("decoded:", list(decoded_bytes))
+        assert decoded_bytes[:2] == b"\xff\xd4", f"common prefix?"
+        assert decoded_bytes[8:10] == b"\xff\xea", "separator?"
+        assert decoded_bytes[16:18] == b"\x7f\xf5", "separator?"
+        print(
+            list(decoded_bytes[2:8]),  # humidity?
+            list(decoded_bytes[10:16]),  # temperature?
+            list(decoded_bytes[18:]),  # humidity?
+            sep="\t",
+        )
     # pyplot.hist(bit_lengths, bins=80, range=(0, 80))
     # pyplot.show()
 
