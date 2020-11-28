@@ -71,17 +71,27 @@ def inspect_recording(recording_path: pathlib.Path):
             numpy.packbits(repeats_bits[0][18:], bitorder="big")
         )
         assert len(decoded_bytes) == 7
+        # TODO adapt bit length
         temperature, = struct.unpack(">H", decoded_bytes[3:5])
         # intercept: -40°C = -40°F
         # slope estimated with statsmodels.regression.linear_model.OLS
         temperature_celsius = temperature / 576.298274 - 40
+        # intercept: 0%
+        # TODO adapt bit length
+        humidity, = struct.unpack(
+            ">H",
+            manchester_code.decode(
+                numpy.packbits(repeats_bits[0][90:122], bitorder="big")
+            ),
+        )
+        humidity /= 51460.82972  # TODO refactor
         print(
             f"{decoded_bytes[0]:02x}",
             f"{decoded_bytes[1]:02x}",
             f"{decoded_bytes[2]:02x}",
             f"{temperature_celsius:.01f}°C",
-            f"{decoded_bytes[5]:02x}",
-            f"{decoded_bytes[6]:02x}",
+            f"{humidity*100:.01f}%",
+            repeats_bits[0][122:],
             # sep="\t",
         )
     # pyplot.hist(bit_lengths, bins=80, range=(0, 80))
