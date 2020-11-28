@@ -4,6 +4,7 @@ import argparse
 import itertools
 import pathlib
 import struct
+import typing
 
 import manchester_code
 import numpy
@@ -11,6 +12,62 @@ import scipy.io.wavfile
 import scipy.ndimage
 import scipy.signal
 from matplotlib import pyplot
+
+
+def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
+    # pyplot.figure()
+    # pyplot.plot(smoothed_frames)
+    rolling_mean = scipy.ndimage.uniform_filter1d(smoothed_frames, size=21 * 16)
+    minimum_threshold = numpy.max(smoothed_frames) / 5
+    threshold = numpy.where(
+        rolling_mean > minimum_threshold, rolling_mean, minimum_threshold
+    )
+    digital_frames = smoothed_frames > threshold
+    # pyplot.plot(digital_frames * threshold)
+    bit_lengths = []
+    bits = []
+    for bit, bit_frames_iter in itertools.groupby(
+        numpy.trim_zeros(digital_frames, trim="f")
+    ):
+        bit_length = sum(1 for _ in bit_frames_iter)
+        bit_lengths.append(bit_length)
+        bits.append(bit)
+        if bit_length > 36:
+            bits.append(bit)
+    # print("transmission length:", len(bits), "bits")
+    # subplot.plot(bits)
+    assert len(bits) == 390
+    repeats_bits = numpy.split(numpy.array(bits), 3)
+    assert numpy.array_equal(repeats_bits[0], repeats_bits[1])
+    repeats_bits[2][-2] = repeats_bits[1][-2]  # FIXME
+    assert numpy.array_equal(repeats_bits[0], repeats_bits[2])
+    assert (repeats_bits[0][:18] == [True, False] * 9).all(), "sync?"
+    decoded_bytes = manchester_code.decode(
+        numpy.packbits(repeats_bits[0][18:], bitorder="big")
+    )
+    assert len(decoded_bytes) == 7
+    # TODO adapt bit length
+    temperature, = struct.unpack(">H", decoded_bytes[3:5])
+    # intercept: -40°C = -40°F
+    # slope estimated with statsmodels.regression.linear_model.OLS
+    temperature_celsius = temperature / 576.298274 - 40
+    # intercept: 0%
+    # TODO adapt bit length
+    humidity, = struct.unpack(
+        ">H",
+        manchester_code.decode(numpy.packbits(repeats_bits[0][90:122], bitorder="big")),
+    )
+    humidity /= 51460.82972  # TODO refactor
+    print(
+        f"{decoded_bytes[0]:02x}",
+        f"{decoded_bytes[1]:02x}",
+        f"{decoded_bytes[2]:02x}",
+        f"{temperature_celsius:.01f}°C",
+        f"{humidity*100:.01f}%",
+        repeats_bits[0][122:],
+        # sep="\t",
+    )
+    return bit_lengths
 
 
 def inspect_recording(recording_path: pathlib.Path):
@@ -41,62 +98,12 @@ def inspect_recording(recording_path: pathlib.Path):
         )
     )
     print("number of transmissions:", len(transmissions_frames))
-    bit_lengths = []
-    # for transmission_frames, subplot in zip(transmissions_frames, pyplot.subplots(len(transmissions_frames))[1]):
+    bit_lengths: typing.List[int] = []
+    # for transmission_frames, subplot in zip(
+    #    transmissions_frames, pyplot.subplots(len(transmissions_frames))[1]
+    # ):
     for transmission_frames in transmissions_frames:
-        # pyplot.figure()
-        # pyplot.plot(transmission_frames)
-        rolling_mean = scipy.ndimage.uniform_filter1d(transmission_frames, size=21 * 16)
-        minimum_threshold = numpy.max(transmission_frames) / 5
-        threshold = numpy.where(
-            rolling_mean > minimum_threshold, rolling_mean, minimum_threshold
-        )
-        digital_transmission_frames = transmission_frames > threshold
-        # pyplot.plot(digital_transmission_frames * threshold)
-        bits = []
-        for bit, bit_frames_iter in itertools.groupby(
-            numpy.trim_zeros(digital_transmission_frames, trim="f")
-        ):
-            bit_length = sum(1 for _ in bit_frames_iter)
-            bit_lengths.append(bit_length)
-            bits.append(bit)
-            if bit_length > 36:
-                bits.append(bit)
-        # print("transmission length:", len(bits), "bits")
-        # subplot.plot(bits)
-        assert len(bits) == 390
-        repeats_bits = numpy.split(numpy.array(bits), 3)
-        assert numpy.array_equal(repeats_bits[0], repeats_bits[1])
-        repeats_bits[2][-2] = repeats_bits[1][-2]  # FIXME
-        assert numpy.array_equal(repeats_bits[0], repeats_bits[2])
-        assert (repeats_bits[0][:18] == [True, False] * 9).all(), "sync?"
-        decoded_bytes = manchester_code.decode(
-            numpy.packbits(repeats_bits[0][18:], bitorder="big")
-        )
-        assert len(decoded_bytes) == 7
-        # TODO adapt bit length
-        temperature, = struct.unpack(">H", decoded_bytes[3:5])
-        # intercept: -40°C = -40°F
-        # slope estimated with statsmodels.regression.linear_model.OLS
-        temperature_celsius = temperature / 576.298274 - 40
-        # intercept: 0%
-        # TODO adapt bit length
-        humidity, = struct.unpack(
-            ">H",
-            manchester_code.decode(
-                numpy.packbits(repeats_bits[0][90:122], bitorder="big")
-            ),
-        )
-        humidity /= 51460.82972  # TODO refactor
-        print(
-            f"{decoded_bytes[0]:02x}",
-            f"{decoded_bytes[1]:02x}",
-            f"{decoded_bytes[2]:02x}",
-            f"{temperature_celsius:.01f}°C",
-            f"{humidity*100:.01f}%",
-            repeats_bits[0][122:],
-            # sep="\t",
-        )
+        bit_lengths.extend(inspect_transmission(transmission_frames))
     # pyplot.hist(bit_lengths, bins=80, range=(0, 80))
     # pyplot.show()
 
