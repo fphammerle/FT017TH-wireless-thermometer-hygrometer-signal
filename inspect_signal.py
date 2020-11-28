@@ -24,42 +24,45 @@ def inspect_recording(recording_path: pathlib.Path):
     smoothed_frames = scipy.signal.medfilt(frames, kernel_size=21)
     # pyplot.plot(smoothed_frames)
     silence_mask = scipy.signal.medfilt(smoothed_frames == 0, kernel_size=21)
-    msg_start_indices = [
+    transmission_start_indices = [
         next(silence_mask_iter)[0]
         for is_silence, silence_mask_iter in itertools.groupby(
             enumerate(silence_mask), key=lambda v: v[1]
         )
         if not is_silence
     ]
-    msgs_frames = list(
+    transmissions_frames = list(
         filter(
             lambda f: len(f) > 10000,
-            map(numpy.trim_zeros, numpy.split(smoothed_frames, msg_start_indices)),
+            map(
+                numpy.trim_zeros,
+                numpy.split(smoothed_frames, transmission_start_indices),
+            ),
         )
     )
-    print("number of messages:", len(msgs_frames))
+    print("number of transmissions:", len(transmissions_frames))
     bit_lengths = []
-    # for msg_frames, subplot in zip(msgs_frames, pyplot.subplots(len(msgs_frames))[1]):
-    for msg_frames in msgs_frames:
+    # for transmission_frames, subplot in zip(transmissions_frames, pyplot.subplots(len(transmissions_frames))[1]):
+    for transmission_frames in transmissions_frames:
         # pyplot.figure()
-        # pyplot.plot(msg_frames)
-        rolling_mean = scipy.ndimage.uniform_filter1d(msg_frames, size=21 * 16)
-        minimum_threshold = numpy.max(msg_frames) / 5
+        # pyplot.plot(transmission_frames)
+        rolling_mean = scipy.ndimage.uniform_filter1d(transmission_frames, size=21 * 16)
+        minimum_threshold = numpy.max(transmission_frames) / 5
         threshold = numpy.where(
             rolling_mean > minimum_threshold, rolling_mean, minimum_threshold
         )
-        digital_msg_frames = msg_frames > threshold
-        # pyplot.plot(digital_msg_frames * threshold)
+        digital_transmission_frames = transmission_frames > threshold
+        # pyplot.plot(digital_transmission_frames * threshold)
         bits = []
         for bit, bit_frames_iter in itertools.groupby(
-            numpy.trim_zeros(digital_msg_frames, trim="f")
+            numpy.trim_zeros(digital_transmission_frames, trim="f")
         ):
             bit_length = sum(1 for _ in bit_frames_iter)
             bit_lengths.append(bit_length)
             bits.append(bit)
             if bit_length > 36:
                 bits.append(bit)
-        # print("message length:", len(bits), "bits")
+        # print("transmission length:", len(bits), "bits")
         # subplot.plot(bits)
         assert len(bits) == 390
         repeats_bits = numpy.split(numpy.array(bits), 3)
