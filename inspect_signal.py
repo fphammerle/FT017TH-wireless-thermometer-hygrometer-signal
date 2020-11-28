@@ -48,21 +48,28 @@ def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
 def inspect_message(data_bits: typing.List[bool]) -> None:
     assert len(data_bits) == (390 // 3 // 2) == 65
     assert data_bits[:9] == [True] * 9, "sync?"
-    # TODO adapt bit range
-    temperature, = struct.unpack(">H", numpy.packbits(data_bits[33:45], bitorder="big"))
+    temperature_index, = struct.unpack(
+        ">H", numpy.packbits(data_bits[33:45], bitorder="big")
+    )
+    # advertised range: [-40°C, +60°C]
     # intercept: -40°C = -40°F
     # slope estimated with statsmodels.regression.linear_model.OLS
-    temperature_celsius = temperature / 576.077364 - 40
+    # 12 bits have sufficient range: 2**12 * slope / 2**4 - 40 = 73.76
+    temperature_celsius = temperature_index / 576.077364 - 40
+    # advertised range: [10%, 99%]
     # intercept: 0%
-    # TODO adapt bit length
-    humidity, = struct.unpack(">H", numpy.packbits(data_bits[45:57], bitorder="big"))
-    humidity /= 51451.432435  # TODO refactor
+    # slope estimated with statsmodels.regression.linear_model.OLS
+    # 12 bits have sufficient range: 2**12 * slope / 2**4 + 0 = 1.27
+    relative_humidity_index, = struct.unpack(
+        ">H", numpy.packbits(data_bits[45:57], bitorder="big")
+    )
+    relative_humidity = relative_humidity_index / 51451.432435
     print(
-        numpy.packbits(data_bits[9:33], bitorder="big"),
+        numpy.packbits(data_bits[9:33], bitorder="big"),  # address & battery?
         # f"{data_bytes[0]:02x}",
         f"{temperature_celsius:.01f}°C",
-        f"{humidity*100:.01f}%",
-        numpy.packbits(data_bits[57:], bitorder="big"),
+        f"{relative_humidity*100:.01f}%",
+        numpy.packbits(data_bits[57:], bitorder="big"),  # checksum?
         sep="\t",
     )
 
