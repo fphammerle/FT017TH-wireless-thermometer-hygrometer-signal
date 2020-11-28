@@ -49,10 +49,10 @@ def inspect_message(data_bits: typing.List[bool]) -> None:
     assert len(data_bits) == (390 // 3 // 2) == 65
     assert data_bits[:9] == [True] * 9, "sync?"
     # TODO adapt bit range
-    temperature, = struct.unpack(">H", numpy.packbits(data_bits[33:49], bitorder="big"))
+    temperature, = struct.unpack(">H", numpy.packbits(data_bits[33:45], bitorder="big"))
     # intercept: -40°C = -40°F
     # slope estimated with statsmodels.regression.linear_model.OLS
-    temperature_celsius = temperature / 576.298274 - 40
+    temperature_celsius = temperature / 576.077364 - 40
     # intercept: 0%
     # TODO adapt bit length
     humidity, = struct.unpack(">H", numpy.packbits(data_bits[45:61], bitorder="big"))
