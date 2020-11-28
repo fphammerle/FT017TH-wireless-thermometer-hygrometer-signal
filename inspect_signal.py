@@ -25,25 +25,30 @@ def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
     digital_frames = smoothed_frames > threshold
     # pyplot.plot(digital_frames * threshold)
     bit_lengths = []
-    bits = []
+    manchester_bits = []
     for bit, bit_frames_iter in itertools.groupby(
         numpy.trim_zeros(digital_frames, trim="f")
     ):
         bit_length = sum(1 for _ in bit_frames_iter)
         bit_lengths.append(bit_length)
-        bits.append(bit)
+        manchester_bits.append(bit)
         if bit_length > 36:
-            bits.append(bit)
-    # print("transmission length:", len(bits), "bits")
-    # subplot.plot(bits)
-    assert len(bits) == 390
-    repeats_bits = numpy.split(numpy.array(bits), 3)
-    assert numpy.array_equal(repeats_bits[0], repeats_bits[1])
-    repeats_bits[2][-2] = repeats_bits[1][-2]  # FIXME
-    assert numpy.array_equal(repeats_bits[0], repeats_bits[2])
-    assert (repeats_bits[0][:18] == [True, False] * 9).all(), "sync?"
+            manchester_bits.append(bit)
+    # print("transmission length:", len(manchester_bits), "manchester bits")
+    # subplot.plot(manchester_bits)
+    assert len(manchester_bits) == 390
+    repeats_manchester_bits = numpy.split(numpy.array(manchester_bits), 3)
+    assert numpy.array_equal(repeats_manchester_bits[0], repeats_manchester_bits[1])
+    repeats_manchester_bits[2][-2] = repeats_manchester_bits[1][-2]  # FIXME
+    assert numpy.array_equal(repeats_manchester_bits[0], repeats_manchester_bits[2])
+    inspect_message(repeats_manchester_bits[0])
+    return bit_lengths
+
+
+def inspect_message(manchester_bits) -> None:
+    assert (manchester_bits[:18] == [True, False] * 9).all(), "sync?"
     decoded_bytes = manchester_code.decode(
-        numpy.packbits(repeats_bits[0][18:], bitorder="big")
+        numpy.packbits(manchester_bits[18:], bitorder="big")
     )
     assert len(decoded_bytes) == 7
     # TODO adapt bit length
@@ -55,7 +60,7 @@ def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
     # TODO adapt bit length
     humidity, = struct.unpack(
         ">H",
-        manchester_code.decode(numpy.packbits(repeats_bits[0][90:122], bitorder="big")),
+        manchester_code.decode(numpy.packbits(manchester_bits[90:122], bitorder="big")),
     )
     humidity /= 51460.82972  # TODO refactor
     print(
@@ -64,10 +69,9 @@ def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
         f"{decoded_bytes[2]:02x}",
         f"{temperature_celsius:.01f}°C",
         f"{humidity*100:.01f}%",
-        repeats_bits[0][122:],
+        manchester_bits[122:],
         # sep="\t",
     )
-    return bit_lengths
 
 
 def inspect_recording(recording_path: pathlib.Path):
