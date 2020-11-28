@@ -41,35 +41,31 @@ def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
     assert numpy.array_equal(repeats_manchester_bits[0], repeats_manchester_bits[1])
     repeats_manchester_bits[2][-2] = repeats_manchester_bits[1][-2]  # FIXME
     assert numpy.array_equal(repeats_manchester_bits[0], repeats_manchester_bits[2])
-    inspect_message(repeats_manchester_bits[0])
+    inspect_message(list(manchester_code.decode_bits(repeats_manchester_bits[0])))
     return bit_lengths
 
 
-def inspect_message(manchester_bits) -> None:
-    assert (manchester_bits[:18] == [True, False] * 9).all(), "sync?"
-    decoded_bytes = manchester_code.decode(
-        numpy.packbits(manchester_bits[18:], bitorder="big")
-    )
-    assert len(decoded_bytes) == 7
+def inspect_message(data_bits: typing.List[bool]) -> None:
+    assert len(data_bits) == (390 // 3 // 2)
+    assert data_bits[:9] == [True] * 9, "sync?"
+    data_bytes = numpy.packbits(data_bits[9:], bitorder="big")
+    assert len(data_bytes) == 7
     # TODO adapt bit length
-    temperature, = struct.unpack(">H", decoded_bytes[3:5])
+    temperature, = struct.unpack(">H", data_bytes[3:5])
     # intercept: -40°C = -40°F
     # slope estimated with statsmodels.regression.linear_model.OLS
     temperature_celsius = temperature / 576.298274 - 40
     # intercept: 0%
     # TODO adapt bit length
-    humidity, = struct.unpack(
-        ">H",
-        manchester_code.decode(numpy.packbits(manchester_bits[90:122], bitorder="big")),
-    )
+    humidity, = struct.unpack(">H", numpy.packbits(data_bits[45:61], bitorder="big"))
     humidity /= 51460.82972  # TODO refactor
     print(
-        f"{decoded_bytes[0]:02x}",
-        f"{decoded_bytes[1]:02x}",
-        f"{decoded_bytes[2]:02x}",
+        f"{data_bytes[0]:02x}",
+        f"{data_bytes[1]:02x}",
+        f"{data_bytes[2]:02x}",
         f"{temperature_celsius:.01f}°C",
         f"{humidity*100:.01f}%",
-        manchester_bits[122:],
+        data_bits[61:],
         # sep="\t",
     )
 
