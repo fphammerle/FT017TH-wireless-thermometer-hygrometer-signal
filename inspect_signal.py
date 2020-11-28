@@ -55,14 +55,14 @@ def inspect_message(data_bits: typing.List[bool]) -> None:
     temperature_celsius = temperature / 576.077364 - 40
     # intercept: 0%
     # TODO adapt bit length
-    humidity, = struct.unpack(">H", numpy.packbits(data_bits[45:61], bitorder="big"))
-    humidity /= 51460.82972  # TODO refactor
+    humidity, = struct.unpack(">H", numpy.packbits(data_bits[45:57], bitorder="big"))
+    humidity /= 51451.432435  # TODO refactor
     print(
         numpy.packbits(data_bits[9:33], bitorder="big"),
         # f"{data_bytes[0]:02x}",
         f"{temperature_celsius:.01f}°C",
         f"{humidity*100:.01f}%",
-        numpy.packbits(data_bits[61:], bitorder="big"),
+        numpy.packbits(data_bits[57:], bitorder="big"),
         sep="\t",
     )
 
