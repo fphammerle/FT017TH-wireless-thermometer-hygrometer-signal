@@ -25,15 +25,27 @@ After conversion to binary signal:
 
 Signal is [manchester-encoded](https://en.wikipedia.org/wiki/Manchester_code).
 
-Each transmission contains 3 repeats of the same message:
+Each transmission contains 3 repeats of the same message.
 
 Each message consists of 65 bits:
 
 | bit range | carried information                                    |
 |-----------|--------------------------------------------------------|
 | 0-8       | all high bits, probably sync signal                    |
-| 9-17      | same byte in all transmissions, maybe sensors address? |
+| 9-17      | same byte in all transmissions, maybe sensor address?  |
 | 18-32     | unknown                                                |
 | 33-44     | temperature                                            |
 | 45-56     | humidity                                               |
 | 57-64     | unknown                                                |
+
+### Temperature & Humidity
+
+I recorded a few transmissions (`*.wav`)
+and compared the received data with the values indicated on the display (`displayed-values.yml`).
+
+The most significant bit is transferred first (big-endian).
+
+Linear regression models estimate:
+- `temperature_celsius = temperature_index / 576.077364 - 40`
+  (intercept at `-40°C = -40°F`)
+- `relative_humidity = relative_humidity_index / 51451.432435`
