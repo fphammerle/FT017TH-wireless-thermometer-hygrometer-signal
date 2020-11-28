@@ -46,7 +46,7 @@ def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
 
 
 def inspect_message(data_bits: typing.List[bool]) -> None:
-    assert len(data_bits) == (390 // 3 // 2)
+    assert len(data_bits) == (390 // 3 // 2) == 65
     assert data_bits[:9] == [True] * 9, "sync?"
     # TODO adapt bit range
     temperature, = struct.unpack(">H", numpy.packbits(data_bits[33:49], bitorder="big"))
@@ -57,16 +57,13 @@ def inspect_message(data_bits: typing.List[bool]) -> None:
     # TODO adapt bit length
     humidity, = struct.unpack(">H", numpy.packbits(data_bits[45:61], bitorder="big"))
     humidity /= 51460.82972  # TODO refactor
-    data_bytes = numpy.packbits(data_bits[9:], bitorder="big")
-    assert len(data_bytes) == 7
     print(
-        f"{data_bytes[0]:02x}",
-        f"{data_bytes[1]:02x}",
-        f"{data_bytes[2]:02x}",
+        numpy.packbits(data_bits[9:33], bitorder="big"),
+        # f"{data_bytes[0]:02x}",
         f"{temperature_celsius:.01f}°C",
         f"{humidity*100:.01f}%",
-        data_bits[61:],
-        # sep="\t",
+        numpy.packbits(data_bits[61:], bitorder="big"),
+        sep="\t",
     )
 
 
