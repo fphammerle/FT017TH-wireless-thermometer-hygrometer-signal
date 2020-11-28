@@ -48,10 +48,8 @@ def inspect_transmission(smoothed_frames: numpy.ndarray) -> typing.List[int]:
 def inspect_message(data_bits: typing.List[bool]) -> None:
     assert len(data_bits) == (390 // 3 // 2)
     assert data_bits[:9] == [True] * 9, "sync?"
-    data_bytes = numpy.packbits(data_bits[9:], bitorder="big")
-    assert len(data_bytes) == 7
-    # TODO adapt bit length
-    temperature, = struct.unpack(">H", data_bytes[3:5])
+    # TODO adapt bit range
+    temperature, = struct.unpack(">H", numpy.packbits(data_bits[33:49], bitorder="big"))
     # intercept: -40°C = -40°F
     # slope estimated with statsmodels.regression.linear_model.OLS
     temperature_celsius = temperature / 576.298274 - 40
@@ -59,6 +57,8 @@ def inspect_message(data_bits: typing.List[bool]) -> None:
     # TODO adapt bit length
     humidity, = struct.unpack(">H", numpy.packbits(data_bits[45:61], bitorder="big"))
     humidity /= 51460.82972  # TODO refactor
+    data_bytes = numpy.packbits(data_bits[9:], bitorder="big")
+    assert len(data_bytes) == 7
     print(
         f"{data_bytes[0]:02x}",
         f"{data_bytes[1]:02x}",
