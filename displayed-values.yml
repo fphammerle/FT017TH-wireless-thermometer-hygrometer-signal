@@ -142,3 +142,7 @@ gqrx_20201128_100252_433893500.silences-shortened-4s.wav:
 - time: 20201128T111610+0100
   temperature_degrees_celsius: 22.5
   relative_humidity: 0.57
+gqrx_20201129_071943_433893500.silences-shortened-4s.wav:
+- time: 20201129T082017+0100
+  temperature_degrees_celsius: 23.2
+  relative_humidity: 49
