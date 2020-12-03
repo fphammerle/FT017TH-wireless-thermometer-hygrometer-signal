@@ -7,12 +7,16 @@
 - **Model**: FT017TH
 - **Manufacturer**: Unit Connection Technology Ltd, Shenzhen
 - **Dealer**: Shenzhen Amier Technology CO Ltd (amirtec.com)
-- **Frequency**: 433.92MHz
+- **Frequency** (indicated): 433.92MHz
 - powered by two 1.5V AAA batteries
 
 ## Signal
 
-Sensors transmits approximately once per minute.
+Sensor transmits approximately once per minute.
+
+Measurements with [cc1101](https://github.com/fphammerle/python-cc1101):
+- **Frequency**: 433.945 MHz
+- **Symbol rate**: 2048 Baud
 
 Recorded with [gqrx](https://gqrx.dk/) via RTL2832U/R820T (433.893MHz, AM):
 ![image](gqrx_20201128_100252_433893500.silences-shortened-4s.frames191500-207000.svg)
