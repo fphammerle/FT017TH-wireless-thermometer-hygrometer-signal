@@ -53,3 +53,8 @@ Linear regression models estimate:
 - `temperature_celsius = temperature_index / 576.077364 - 40`
   (intercept at `-40°C = -40°F`)
 - `relative_humidity = relative_humidity_index / 51451.432435`
+
+## Automation
+
+The command-line tool & python library [wireless-sensor](https://pypi.org/project/wireless-sensor/)
+automatically decodes signals of FT017TH wireless thermo/hygrometers.
